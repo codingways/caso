@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kb-prod-db
+  labels:
+    run: kb-prod-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: kb-prod-db
+  serviceName: kb-prod-db
+  template:
+    metadata:
+      generateName: kb-prod-db
+      labels:
+        run: kb-prod-db
+    spec:
+      restartPolicy: Always
+      containers:
+        - name: kb-prod-db
+          image: mariadb:11
+          imagePullPolicy: Always
+          env:
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: db-name
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: db-password
+          ports:
+            - name: kb-prod-db
+              containerPort: 3306
+          volumeMounts:
+            - mountPath: "/var/lib/mysql"
+              name: mariadb-data
+              subPath: db
+      volumes:
+        - name: secret-volume
+          secret:
+            secretName: db-secret
+  volumeClaimTemplates:
+   - metadata:
+       name: mariadb-data
+     spec:
+       accessModes: [ "ReadWriteOnce" ]
+       #storageClassName: "openebs-standalone"
+       resources:
+         requests:
+           storage: 1Gi
